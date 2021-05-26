@@ -3,10 +3,12 @@
 #include "cinder/gl/gl.h"
 #include "cinder/CinderImGui.h"
 #include "cinder/Rand.h"
+#include "rapidjson/document.h"
+#include "rapidjson/writer.h"
+#include "rapidjson/stringbuffer.h"
 
 using namespace ci;
 using namespace ci::app;
-
 
 // Enumerator of shape types
 enum class Type { Circle, Square, Rectangle };
@@ -14,6 +16,7 @@ enum class Type { Circle, Square, Rectangle };
 // Custom shape class
 class Shape {
 	public:
+		bool Rouge;						// is object editable
 		virtual void displayProperties() = 0;	// abstract function to display extra properties
 		virtual void drawShape() = 0;			// abstract function to draw shape
 		virtual bool inBorders(vec2 pos) = 0;	// abstract function to check if pos inside shape
@@ -25,6 +28,7 @@ class Shape {
 			loc = l;
 			col = c;
 			t_ = t;
+			Rouge = false;
 		}
 
 		// Moves shape center in direction dir
@@ -52,8 +56,7 @@ class Circle : public Shape {
 		}
 
 		void displayProperties() {
-			ImGui::Text("Type: Circle");
-			ImGui::Text("Radius: %.2f", radius);
+			ImGui::InputFloat("Radius", &radius, Rouge ? 0 : ImGuiInputTextFlags_ReadOnly);
 		}
 };
 
@@ -73,8 +76,7 @@ class Square : public Shape {
 		}
 
 		void displayProperties() {
-			ImGui::Text("Type: Square");
-			ImGui::Text("Size: %.2f", size);
+			ImGui::InputFloat("Size", &size, Rouge ? 0 : ImGuiInputTextFlags_ReadOnly);
 		}
 };
 
@@ -96,9 +98,8 @@ class Rectangle : public Shape {
 		}
 
 		void displayProperties() {
-			ImGui::Text("Type: Rectangle");
-			ImGui::Text("Width: %.2f", w);
-			ImGui::Text("Height: %.2f", h);
+			ImGui::InputFloat("Width", &w, Rouge ? 0 : ImGuiInputTextFlags_ReadOnly);
+			ImGui::InputFloat("Height", &h, Rouge ? 0 : ImGuiInputTextFlags_ReadOnly);
 		}
 };
 
@@ -113,7 +114,6 @@ static void showUI(std::vector<Shape*> shapes) {
 		if (ImGui::BeginMenuBar()) {
 			if (ImGui::BeginMenu("File")) {
 				if (ImGui::MenuItem("Save")) {
-
 				}
 				if (ImGui::MenuItem("Open")) {
 
@@ -145,10 +145,19 @@ static void showUI(std::vector<Shape*> shapes) {
 			ImGui::Text("Shape: %d", selected);
 			ImGui::Separator();
 
-			Shape* cur = shapes[selected];
-			ImGui::Text("Location: (%.0f,%.0f)", cur->loc.x, cur->loc.y);
-			ImGui::Text("Color in HSV: (%.2f, %.2f, %.2f)", cur->col.r, cur->col.g, cur->col.b);
+
+			Shape* cur = shapes[selected];			
+			ImGui::Checkbox("Enable edit", &(cur->Rouge));
+			ImGui::InputFloat("Loc x", &(cur->loc.x), 0.0f, 1000.0f, "%.3f", cur->Rouge ? 0 : ImGuiInputTextFlags_ReadOnly);
+			ImGui::InputFloat("Loc y", &(cur->loc.y), 0.0f, 1000.0f, "%.3f", cur->Rouge ? 0 : ImGuiInputTextFlags_ReadOnly);
+			
+			if (cur->Rouge)
+				ImGui::ColorEdit3("Color", &(cur->col));
+			else
+				ImGui::TextColored(cur->col, "Color: (%.3f, %.3f, %.3f)", cur->col.r, cur->col.g, cur->col.b);
+			
 			cur->displayProperties();
+
 
 			ImGui::EndChild();
 			ImGui::EndGroup();
